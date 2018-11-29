@@ -31,8 +31,15 @@ public class Collman {
         return map == null || map.isEmpty();
     }
 
-    public static <T> Optional<T> get(final List<T> list, final int index) {
-        if (index < 0 || size(list) <= index) {
+    public static <T> Optional<T> get(final List<T> list, int index) {
+        if (isEmpty(list)) {
+            return Optional.empty();
+        }
+        int size = size(list);
+        if (index < 0) {
+            index = size + index;
+        }
+        if (index < 0 || index >= size) {
             return Optional.empty();
         } else {
             return Optional.ofNullable(list.get(index));
