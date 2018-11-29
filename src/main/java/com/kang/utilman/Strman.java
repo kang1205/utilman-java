@@ -51,7 +51,7 @@ public class Strman {
      */
     public static Optional<String> append(final String value, final String... appends) {
         return Optional.ofNullable(value).map(t -> {
-            if (appends.length == 0) {
+            if (Arrman.isEmpty(appends)) {
                 return t;
             } else {
                 StringBuilder builder = new StringBuilder(t);
@@ -72,7 +72,7 @@ public class Strman {
      */
     public static Optional<String> prepend(final String value, final String... prepends) {
         return Optional.ofNullable(value).map(t -> {
-            if (prepends.length == 0) {
+            if (Arrman.isEmpty(prepends)) {
                 return t;
             } else {
                 StringBuilder builder = new StringBuilder();
@@ -166,7 +166,7 @@ public class Strman {
      * @return true if all needles are found else false.
      */
     public static boolean contains(final boolean caseSensitive, final String value, final String... needles) {
-        if (isEmpty(value) || needles.length == 0) {
+        if (isEmpty(value) || Arrman.isEmpty(needles)) {
             return false;
         } else {
             return Arrays.stream(needles).allMatch(needle -> contains(value, needle, caseSensitive));
@@ -193,7 +193,7 @@ public class Strman {
      * @return boolean true if any needle is found else false
      */
     public static boolean containsAny(final boolean caseSensitive, final String value, final String... needles) {
-        if (isEmpty(value) || needles.length == 0) {
+        if (isEmpty(value) || Arrman.isEmpty(needles)) {
             return false;
         }
         return Arrays.stream(needles).anyMatch(needle -> contains(value, needle, caseSensitive));
@@ -221,7 +221,7 @@ public class Strman {
      */
     public static long countSubstr(final String value, final String subStr, final boolean caseSensitive,
                                    boolean allowOverlapping) {
-        if (value == null || subStr == null) {
+        if (isEmpty(value) || isEmpty(subStr)) {
             return 0L;
         }
         return countSubstr(caseSensitive ? value : value.toLowerCase(), caseSensitive ? subStr : subStr.toLowerCase(),
@@ -248,7 +248,7 @@ public class Strman {
      * @return true or false
      */
     public static boolean endsWith(final String value, final String search, final boolean caseSensitive) {
-        if (value == null || search == null) {
+        if (isEmpty(value) || isEmpty(search)) {
             return false;
         }
         if (caseSensitive) {
@@ -269,7 +269,7 @@ public class Strman {
      * @return Returns position of first occurrence of needle.
      */
     public static int indexOf(final String value, final String needle, final int offset, final boolean caseSensitive) {
-        if (value == null || needle == null || offset >= value.length()) {
+        if (isNull(value) || isNull(needle) || offset >= value.length()) {
             return -1;
         }
         int position = offset >= 0 ? offset : value.length() + offset;
@@ -303,7 +303,7 @@ public class Strman {
      * @return string with prefix if it was not present.
      */
     public static Optional<String> ensureLeft(final String value, final String prefix, final boolean caseSensitive) {
-        if (value == null || prefix == null) {
+        if (isNull(value) || isNull(prefix)) {
             return Optional.ofNullable(value);
         } else if (caseSensitive) {
             return Optional.of(value).map(t -> t.startsWith(prefix) ? t : prefix + t);
@@ -332,7 +332,7 @@ public class Strman {
      * @return The string which is guarenteed to start with substr
      */
     public static Optional<String> ensureRight(final String value, final String suffix, boolean caseSensitive) {
-        if (value == null || suffix == null) {
+        if (isNull(value) || isNull(suffix)) {
             return Optional.ofNullable(value);
         } else if (endsWith(value, suffix, caseSensitive)) {
             return Optional.of(value);
@@ -475,10 +475,10 @@ public class Strman {
      * @return String with substr added
      */
     public static Optional<String> insert(final String value, final String substr, final int index) {
-        if (substr == null) {
+        if (isNull(substr) || isNull(value)) {
             return Optional.ofNullable(value);
         }
-        return Optional.ofNullable(value).map(t -> {
+        return Optional.of(value).map(t -> {
             int position = index >= 0 ? index : size(value) + index;
             if (position <= 0) {
                 return append(substr, t);
@@ -530,7 +530,7 @@ public class Strman {
     }
 
     public static boolean isNull(final CharSequence value) {
-        return value == null;
+        return Objects.isNull(value);
     }
 
     /**
@@ -728,7 +728,7 @@ public class Strman {
      * @return The String without prefix
      */
     public static Optional<String> removeLeft(final String value, final String prefix, final boolean caseSensitive) {
-        if (value == null || prefix == null) {
+        if (isNull(value) || isNull(prefix)) {
             return Optional.ofNullable(value);
         } else if (caseSensitive) {
             return Optional.of(value.startsWith(prefix) ? value.substring(prefix.length()) : value);
@@ -768,7 +768,7 @@ public class Strman {
      * @return The String without suffix!
      */
     public static Optional<String> removeRight(final String value, final String suffix, final boolean caseSensitive) {
-        if (value == null || suffix == null) {
+        if (isNull(value) || isNull(suffix)) {
             return Optional.ofNullable(value);
         } else if (endsWith(value, suffix, caseSensitive)) {
             return Optional.of(value.substring(0, value.toLowerCase().lastIndexOf(suffix.toLowerCase())));
@@ -809,7 +809,7 @@ public class Strman {
      */
     public static Optional<String> replace(final String value, final String search, final String newValue,
                                            final boolean caseSensitive) {
-        if (value == null || search == null || newValue == null) {
+        if (isNull(value) || isNull(search) || isNull(newValue)) {
             return Optional.ofNullable(value);
         } else if (caseSensitive) {
             return Optional.of(value.replace(search, newValue));
@@ -838,7 +838,7 @@ public class Strman {
      * @return Right padded String
      */
     public static Optional<String> rightPad(final String value, String pad, final int length) {
-        if (value == null || pad == null || value.length() > length) {
+        if (isNull(value) || isNull(pad) || value.length() > length) {
             return Optional.ofNullable(value);
         }
         return append(value, repeat(pad, length - value.length()).get());
@@ -885,7 +885,7 @@ public class Strman {
      * @return String truncated unsafely.
      */
     public static Optional<String> truncate(final String value, final int length, final String filler) {
-        if (value == null || length <= 0) {
+        if (isNull(value) || length <= 0) {
             return Optional.empty();
         }
         if (length >= value.length()) {
@@ -903,7 +903,7 @@ public class Strman {
      * @return The truncated String
      */
     public static Optional<String> safeTruncate(final String value, final int length, final String filler) {
-        if (value == null || length <= 0) {
+        if (isNull(value) || length <= 0) {
             return Optional.empty();
         }
         if (length >= value.length()) {
@@ -1222,13 +1222,13 @@ public class Strman {
      * @return true if enclosed false otherwise
      */
     public static boolean isEnclosedBetween(final String input, final String leftEncloser, String rightEncloser) {
-        if (input == null) {
+        if (isNull(input)) {
             throw new IllegalArgumentException("input can't be null");
         }
-        if (leftEncloser == null) {
+        if (isNull(leftEncloser)) {
             throw new IllegalArgumentException("leftEncloser can't be null");
         }
-        if (rightEncloser == null) {
+        if (isNull(rightEncloser)) {
             throw new IllegalArgumentException("rightEncloser can't be null");
         }
         return input.startsWith(leftEncloser) && input.endsWith(rightEncloser);
@@ -1330,10 +1330,10 @@ public class Strman {
      * An empty list otherwise.
      */
     public static List<String> zip(String... inputs) {
-        if (inputs.length == 0) {
+        if (Arrman.isEmpty(inputs)) {
             return Collections.emptyList();
         }
-        OptionalInt min = Arrays.stream(inputs).mapToInt(str -> str == null ? 0 : str.length()).min();
+        OptionalInt min = Arrays.stream(inputs).mapToInt(Strman::size).min();
         if (!min.isPresent()) {
             return Collections.emptyList();
         }
