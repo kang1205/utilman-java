@@ -2,18 +2,16 @@ package com.kang.utilman;
 
 import java.nio.charset.StandardCharsets;
 import java.util.*;
-import java.util.function.Predicate;
-import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
-import static java.util.function.IntUnaryOperator.identity;
+import static java.util.function.UnaryOperator.identity;
 import static java.util.stream.Collectors.*;
 
 /**
- * A String manipulation library without any dependencies
+ * A String manipulation without any dependencies
  *
  * @author bradly
  * @version 1.0.0
@@ -21,15 +19,27 @@ import static java.util.stream.Collectors.*;
  */
 public class Strman {
 
-    private static final Predicate<String> NULL_STRING_PREDICATE = Objects::isNull;
-    private static final Supplier<String> NULL_VALUE_MSG_SUPPLIER = () -> "'value' should be not null.";
+    private static final char SPACE_CHAR = ' ';
     private static final Pattern WORD_PATTERN = Pattern.compile("\\{(\\w+)}");
+    private static final Pattern NON_WORD_PATTERN = Pattern.compile("\\W+");
     private static final Pattern BLANK_PATTERN = Pattern.compile("\\s");
-    private static final Pattern NON_WORDPATTERN = Pattern.compile("\\W+");
-
-    private static final String[] EMPTY_ARRAY = new String[0];
 
     private Strman() {
+    }
+
+    public static Optional<String> join(CharSequence delimiter, String... values) {
+        if (isNull(delimiter) || Arrman.isEmpty(values)) {
+            return Optional.empty();
+        }
+        if (Arrman.size(values) == 1) {
+            return Optional.ofNullable(values[0]);
+        } else {
+            StringBuilder builder = new StringBuilder(values[0]);
+            for (int i = 1; i < values.length; i++) {
+                builder.append(delimiter).append(values[i]);
+            }
+            return Optional.of(builder.toString());
+        }
     }
 
     /**
@@ -226,10 +236,7 @@ public class Strman {
      * @return true or false
      */
     public static boolean endsWith(final String value, final String search) {
-        if (value == null || search == null) {
-            return false;
-        }
-        return endsWith(value, search, value.length(), true);
+        return endsWith(value, search, true);
     }
 
     /**
@@ -244,28 +251,36 @@ public class Strman {
         if (value == null || search == null) {
             return false;
         }
-        return endsWith(value, search, value.length(), caseSensitive);
+        if (caseSensitive) {
+            return value.endsWith(search);
+        } else {
+            return value.toLowerCase().endsWith(search.toLowerCase());
+        }
     }
 
     /**
-     * Test if value ends with search.
+     * The indexOf() method returns the index within the calling String of the first occurrence of the specified value, starting the search at fromIndex.
+     * Returns -1 if the value is not found.
      *
-     * @param value         input string
-     * @param search        string to search
-     * @param position      position till which you want to search.
-     * @param caseSensitive true or false
-     * @return true or false
+     * @param value         The input String
+     * @param needle        The search String
+     * @param offset        The offset to start searching from.
+     * @param caseSensitive boolean to indicate whether search should be case sensitive
+     * @return Returns position of first occurrence of needle.
      */
-    public static boolean endsWith(final String value, final String search, final int position,
-                                   final boolean caseSensitive) {
-        if (value == null || search == null) {
-            return false;
+    public static int indexOf(final String value, final String needle, final int offset, final boolean caseSensitive) {
+        if (value == null || needle == null || offset >= value.length()) {
+            return -1;
         }
-        int remainingLength = position - search.length();
+        int position = offset >= 0 ? offset : value.length() + offset;
+        if (position < 0) {
+            position = 0;
+        }
         if (caseSensitive) {
-            return value.indexOf(search, remainingLength) > -1;
+            return value.indexOf(needle, position);
+        } else {
+            return value.toLowerCase().indexOf(needle.toLowerCase(), position);
         }
-        return value.toLowerCase().indexOf(search.toLowerCase(), remainingLength) > -1;
     }
 
     /**
@@ -414,7 +429,9 @@ public class Strman {
      * @return The formatted string
      */
     public static Optional<String> format(final String value, String... params) {
-        validate(value, NULL_STRING_PREDICATE, NULL_VALUE_MSG_SUPPLIER);
+        if (isEmpty(value)) {
+            return Optional.empty();
+        }
         Matcher m = WORD_PATTERN.matcher(value);
         String result = value;
         while (m.find()) {
@@ -424,25 +441,7 @@ public class Strman {
             }
             result = result.replace(m.group(), params[paramNumber]);
         }
-        return result;
-    }
-
-    /**
-     * The indexOf() method returns the index within the calling String of the first occurrence of the specified value, starting the search at fromIndex.
-     * Returns -1 if the value is not found.
-     *
-     * @param value         The input String
-     * @param needle        The search String
-     * @param offset        The offset to start searching from.
-     * @param caseSensitive boolean to indicate whether search should be case sensitive
-     * @return Returns position of first occurrence of needle.
-     */
-    public static int indexOf(final String value, final String needle, int offset, boolean caseSensitive) {
-        validate(value, NULL_STRING_PREDICATE, NULL_VALUE_MSG_SUPPLIER);
-        if (caseSensitive) {
-            return value.indexOf(needle, offset);
-        }
-        return value.toLowerCase().indexOf(needle.toLowerCase(), offset);
+        return Optional.of(result);
     }
 
     /**
@@ -475,12 +474,21 @@ public class Strman {
      * @param index  The index to insert substr
      * @return String with substr added
      */
-    public static String insert(final String value, final String substr, final int index) {
-        validate(value, NULL_STRING_PREDICATE, NULL_VALUE_MSG_SUPPLIER);
-        if (index > value.length()) {
-            return value;
+    public static Optional<String> insert(final String value, final String substr, final int index) {
+        if (substr == null) {
+            return Optional.ofNullable(value);
         }
-        return append(value.substring(0, index), substr, value.substring(index));
+        return Optional.ofNullable(value).map(t -> {
+            int position = index >= 0 ? index : size(value) + index;
+            if (position <= 0) {
+                return append(substr, t);
+            } else if (size(t) >= position) {
+                return append(t, substr);
+            } else {
+                return append(t.substring(0, position), substr, t.substring(position));
+            }
+        }).map(Optional::get);
+
     }
 
     /**
@@ -490,16 +498,38 @@ public class Strman {
      * @return true if String is uppercase false otherwise
      */
     public static boolean isUpperCase(final String value) {
-        validate(value, NULL_STRING_PREDICATE, NULL_VALUE_MSG_SUPPLIER);
-        for (int i = 0; i < value.length(); i++) {
-            if (Character.isLowerCase(value.charAt(i))) {
-                return false;
+        if (isEmpty(value)) {
+            return false;
+        } else {
+            for (int i = 0; i < value.length(); i++) {
+                if (Character.isLowerCase(value.charAt(i))) {
+                    return false;
+                }
             }
+            return true;
         }
-        return true;
     }
 
-    public static boolean isNull(final String value) {
+    /**
+     * Verifies if String is lower case
+     *
+     * @param value The input String
+     * @return true if String is lowercase false otherwise
+     */
+    public static boolean isLowerCase(final String value) {
+        if (isEmpty(value)) {
+            return false;
+        } else {
+            for (int i = 0; i < value.length(); i++) {
+                if (Character.isUpperCase(value.charAt(i))) {
+                    return false;
+                }
+            }
+            return true;
+        }
+    }
+
+    public static boolean isNull(final CharSequence value) {
         return value == null;
     }
 
@@ -545,21 +575,6 @@ public class Strman {
         return value instanceof String;
     }
 
-    /**
-     * Verifies if String is lower case
-     *
-     * @param value The input String
-     * @return true if String is lowercase false otherwise
-     */
-    public static boolean isLowerCase(final String value) {
-        validate(value, NULL_STRING_PREDICATE, NULL_VALUE_MSG_SUPPLIER);
-        for (int i = 0; i < value.length(); i++) {
-            if (Character.isUpperCase(value.charAt(i))) {
-                return false;
-            }
-        }
-        return true;
-    }
 
     /**
      * Returns the first n chars of String
@@ -614,8 +629,7 @@ public class Strman {
      * @return Return position of the last occurrence of 'needle'.
      */
     public static int lastIndexOf(final String value, final String needle) {
-        validate(value, NULL_STRING_PREDICATE, NULL_VALUE_MSG_SUPPLIER);
-        return lastIndexOf(value, needle, value.length(), true);
+        return lastIndexOf(value, needle, true);
     }
 
     /**
@@ -628,7 +642,9 @@ public class Strman {
      * @return Return position of the last occurrence of 'needle'.
      */
     public static int lastIndexOf(final String value, final String needle, boolean caseSensitive) {
-        validate(value, NULL_STRING_PREDICATE, NULL_VALUE_MSG_SUPPLIER);
+        if (isNull(value)) {
+            throw new IllegalArgumentException("The 'value' must be not null");
+        }
         return lastIndexOf(value, needle, value.length(), caseSensitive);
     }
 
@@ -644,8 +660,12 @@ public class Strman {
      */
     public static int lastIndexOf(final String value, final String needle, final int offset,
                                   final boolean caseSensitive) {
-        validate(value, NULL_STRING_PREDICATE, NULL_VALUE_MSG_SUPPLIER);
-        validate(needle, NULL_STRING_PREDICATE, NULL_VALUE_MSG_SUPPLIER);
+        if (isNull(value)) {
+            throw new IllegalArgumentException("The 'value' must be not null");
+        }
+        if (isNull(needle)) {
+            throw new IllegalArgumentException("The 'needle' must be not null");
+        }
         if (caseSensitive) {
             return value.lastIndexOf(needle, offset);
         }
@@ -725,7 +745,7 @@ public class Strman {
      * @return String without non-word characters
      */
     public static Optional<String> removeNonWords(final String value) {
-        return Optional.ofNullable(value).map(t -> NON_WORDPATTERN.matcher(t).replaceAll(""));
+        return Optional.ofNullable(value).map(t -> NON_WORD_PATTERN.matcher(t).replaceAll(""));
     }
 
     /**
@@ -761,9 +781,9 @@ public class Strman {
      * Remove all spaces and replace for value.
      *
      * @param value The input String
-     * @return String without spaces
+     * @return String without space
      */
-    public static Optional<String> removeSpaces(final String value) {
+    public static Optional<String> removeSpace(final String value) {
         return Optional.ofNullable(value).map(t -> BLANK_PATTERN.matcher(t).replaceAll(""));
     }
 
@@ -795,7 +815,7 @@ public class Strman {
             return Optional.of(value.replace(search, newValue));
         } else {
             return Optional.of(Pattern.compile(search, Pattern.CASE_INSENSITIVE).matcher(value)
-                    .replaceAll(Matcher.quoteReplacement(newValue)))
+                    .replaceAll(Matcher.quoteReplacement(newValue)));
         }
     }
 
@@ -833,10 +853,10 @@ public class Strman {
     public static Optional<String> leftTrim(final String value) {
         return Optional.ofNullable(value).map(t -> {
             int st = 0;
-            while (st < t.length() && t.charAt(st) <= ' ') {
+            while (st < t.length() && t.charAt(st) <= SPACE_CHAR) {
                 st++;
             }
-            return (st > 0) ? t.substring(st, t.length()) : t;
+            return st > 0 ? t.substring(st) : t;
         });
     }
 
@@ -849,7 +869,7 @@ public class Strman {
     public static Optional<String> rightTrim(final String value) {
         return Optional.ofNullable(value).map(t -> {
             int len = t.length();
-            while (len > 0 && t.charAt(len - 1) <= ' ') {
+            while (len > 0 && t.charAt(len - 1) <= SPACE_CHAR) {
                 len--;
             }
             return len < t.length() ? t.substring(0, len) : t;
@@ -865,11 +885,8 @@ public class Strman {
      * @return String truncated unsafely.
      */
     public static Optional<String> truncate(final String value, final int length, final String filler) {
-        if (value == null) {
+        if (value == null || length <= 0) {
             return Optional.empty();
-        }
-        if (length <= 0) {
-            return Optional.of("");
         }
         if (length >= value.length()) {
             return Optional.of(value);
@@ -886,11 +903,8 @@ public class Strman {
      * @return The truncated String
      */
     public static Optional<String> safeTruncate(final String value, final int length, final String filler) {
-        if (value == null) {
+        if (value == null || length <= 0) {
             return Optional.empty();
-        }
-        if (length <= 0) {
-            return Optional.of("");
         }
         if (length >= value.length()) {
             return Optional.of(value);
@@ -944,15 +958,27 @@ public class Strman {
     }
 
     /**
+     * Split lines to an array
+     *
+     * @param input The input String
+     * @return lines in an array
+     */
+    public static Optional<String[]> lines(String input) {
+        return split(input, "\r\n?|\n");
+    }
+
+    /**
      * Converts all HTML entities to applicable characters.
      *
      * @param encodedHtml The encoded HTML
      * @return The decoded HTML
      */
-    public static String htmlDecode(final String encodedHtml) {
-        validate(encodedHtml, NULL_STRING_PREDICATE, NULL_VALUE_MSG_SUPPLIER);
-        String[] entities = encodedHtml.split("&\\W+;");
-        return Arrays.stream(entities).map(e -> HtmlDecodedEntities.entities.get(e)).collect(joining());
+    public static Optional<String> htmlDecode(final String encodedHtml) {
+        if (isNull(encodedHtml)) {
+            return Optional.empty();
+        } else {
+            return Optional.ofNullable(Arrays.stream(encodedHtml.split("&\\W+;")).map(HtmlDecodedEntities.entities::get).collect(joining()));
+        }
     }
 
     /**
@@ -961,10 +987,13 @@ public class Strman {
      * @param html The HTML to encode
      * @return The encoded data
      */
-    public static String htmlEncode(final String html) {
-        validate(html, NULL_STRING_PREDICATE, NULL_VALUE_MSG_SUPPLIER);
-        return html.chars().mapToObj(c -> "\\u" + String.format("%04x", c).toUpperCase())
-                .map(HtmlEncodedEntities.entities::get).collect(joining());
+    public static Optional<String> htmlEncode(final String html) {
+        if (isNull(html)) {
+            return Optional.empty();
+        } else {
+            return Optional.ofNullable(html.chars().mapToObj(c -> "\\u" + String.format("%04x", c).toUpperCase())
+                    .map(HtmlEncodedEntities.entities::get).collect(joining()));
+        }
     }
 
     /**
@@ -1006,10 +1035,8 @@ public class Strman {
      * @param value The value to slugify
      * @return The slugified value
      */
-    public static String slugify(final String value) {
-        validate(value, NULL_STRING_PREDICATE, NULL_VALUE_MSG_SUPPLIER);
-        String transliterated = transliterate(collapseWhitespace(value.trim().toLowerCase()));
-        return Arrays.stream(words(transliterated.replace("&", "-and-"), "\\W+")).collect(joining("-"));
+    public static Optional<String> slugify(final String value) {
+        return Optional.ofNullable(value).map(t -> collapseWhitespace(t).map(Strman::transliterate).map(Optional::get)).orElse(null).map(t -> t.replace("&", "-and-")).map(t -> split(t, "\\W+").map(s -> Arrays.stream(s).collect(joining("-"))).orElse(t));
     }
 
     /**
@@ -1065,14 +1092,9 @@ public class Strman {
             if (isEmpty(t)) {
                 return t;
             } else {
-
+                return toStudlyCase(t).map(s -> s.substring(0, 1).toLowerCase() + s.substring(1)).orElse(t);
             }
-        })
-        if (value == null || value.length() == 0) {
-            return "";
-        }
-        String str = toStudlyCase(value);
-        return str.substring(0, 1).toLowerCase() + str.substring(1);
+        });
     }
 
     /**
@@ -1083,7 +1105,7 @@ public class Strman {
      */
     public static Optional<String> toStudlyCase(final String value) {
         return Optional.ofNullable(value).map(String::trim).map(t -> collapseWhitespace(t).get().split("\\s*(_|-|\\s)\\s*")).map(t ->
-                Arrays.stream(t).filter(w -> !w.trim().isEmpty()).map(Strman::upperFirst).collect(joining())
+                Arrays.stream(t).filter(w -> !w.trim().isEmpty()).map(Strman::upperFirst).map(Optional::get).collect(joining())
         );
     }
 
@@ -1094,7 +1116,7 @@ public class Strman {
      * @return String tail
      */
     public static Optional<String> tail(final String value) {
-        return Optional.ofNullable(value).filter(v -> !v.isEmpty()).map(v -> last(v, v.length() - 1));
+        return Optional.ofNullable(value).filter(v -> !v.isEmpty()).map(v -> last(v, v.length() - 1).get());
     }
 
     /**
@@ -1104,10 +1126,8 @@ public class Strman {
      * @param chr   string to use
      * @return String decamelized.
      */
-    public static String toDecamelize(final String value, final String chr) {
-        String camelCasedString = toCamelCase(value);
-        String[] words = camelCasedString.split("(?=\\p{Upper})");
-        return Arrays.stream(words).map(String::toLowerCase).collect(joining(Optional.ofNullable(chr).orElse(" ")));
+    public static Optional<String> toDecamelize(final String value, final String chr) {
+        return toCamelCase(value).map(t -> Arrays.stream(t.split("(?=\\p{Upper})")).map(String::toLowerCase).collect(joining(Optional.ofNullable(chr).orElse(" "))));
     }
 
     /**
@@ -1116,7 +1136,7 @@ public class Strman {
      * @param value The input String
      * @return String in kebab-case.
      */
-    public static String toKebabCase(final String value) {
+    public static Optional<String> toKebabCase(final String value) {
         return toDecamelize(value, "-");
     }
 
@@ -1126,19 +1146,22 @@ public class Strman {
      * @param value The input String
      * @return String in snake_case.
      */
-    public static String toSnakeCase(final String value) {
+    public static Optional<String> toSnakeCase(final String value) {
         return toDecamelize(value, "_");
     }
 
-    public static String decode(final String value, final int digits, final int radix) {
-        validate(value, NULL_STRING_PREDICATE, NULL_VALUE_MSG_SUPPLIER);
-        return Arrays.stream(value.split("(?<=\\G.{" + digits + "})"))
+    public static Optional<String> decode(final String value, final int digits, final int radix) {
+        if (isEmpty(value)) {
+            return Optional.empty();
+        }
+
+        return Optional.ofNullable(Arrays.stream(value.split("(?<=\\G.{" + digits + "})"))
                 .map(data -> String.valueOf(Character.toChars(Integer.parseInt(data, radix))))
-                .collect(joining());
+                .collect(joining()));
     }
 
     public static Optional<String> encode(final String value, final int digits, final int radix) {
-        return Optional.ofNullable(value).map(t -> t.chars().mapToObj(ch -> leftPad(Integer.toString(ch, radix), "0", digits)).collect(joining()));
+        return Optional.ofNullable(value).map(t -> t.chars().mapToObj(ch -> leftPad(Integer.toString(ch, radix), "0", digits)).map(Optional::get).collect(joining()));
     }
 
     /**
@@ -1166,8 +1189,7 @@ public class Strman {
      * @return The capitalized string
      */
     public static Optional<String> capitalize(final String input) throws IllegalArgumentException {
-        return Optional.ofNullable(input).map(t -> head(input).map(String::toUpperCase).map(h -> tail(input).map(t -> h + t.toLowerCase()).orElse(h)).get())
-        return;
+        return Optional.ofNullable(input).map(t -> head(input).map(String::toUpperCase).map(h -> tail(input).map(s -> h + s.toLowerCase()).orElse(h))).map(Optional::get);
     }
 
     /**
@@ -1176,15 +1198,8 @@ public class Strman {
      * @param input The string to convert
      * @return The converted string
      */
-    public static String lowerFirst(final String input) throws IllegalArgumentException {
-        if (input == null) {
-            throw new IllegalArgumentException("input can't be null");
-        }
-        if (input.length() == 0) {
-            return "";
-        }
-
-        return head(input).map(String::toLowerCase).map(h -> tail(input).map(t -> h + t).orElse(h)).get();
+    public static Optional<String> lowerFirst(final String input) {
+        return Optional.ofNullable(input).map(t -> head(t).map(String::toLowerCase).map(h -> tail(t).map(s -> h + s).orElse(h))).map(Optional::get);
     }
 
     /**
@@ -1225,11 +1240,11 @@ public class Strman {
      * @param input The string to convert.
      * @return Returns the converted string.
      */
-    public static String upperFirst(String input) {
-        if (input == null) {
-            throw new IllegalArgumentException("input can't be null");
+    public static Optional<String> upperFirst(String input) {
+        if (isEmpty(input)) {
+            return Optional.ofNullable(input);
         }
-        return head(input).map(String::toUpperCase).map(h -> tail(input).map(t -> h + t).orElse(h)).get();
+        return head(input).map(String::toUpperCase).map(h -> tail(input).map(t -> h + t).orElse(h));
     }
 
     /**
@@ -1239,7 +1254,7 @@ public class Strman {
      * @return Returns the trimmed string.
      */
     public static Optional<String> trimStart(final String input) {
-        return Optional.ofNullable(input).filter(v -> !v.isEmpty()).map(Strman::leftTrim);
+        return Optional.ofNullable(input).filter(v -> !v.isEmpty()).map(Strman::leftTrim).map(Optional::get);
     }
 
     /**
@@ -1263,7 +1278,7 @@ public class Strman {
      * @return Returns the trimmed string.
      */
     public static Optional<String> trimEnd(final String input) {
-        return Optional.ofNullable(input).filter(v -> !v.isEmpty()).map(Strman::rightTrim);
+        return Optional.ofNullable(input).filter(v -> !v.isEmpty()).map(Strman::rightTrim).map(Optional::get);
     }
 
     /**
@@ -1290,22 +1305,21 @@ public class Strman {
         if (isEmpty(input)) {
             return Collections.emptyMap();
         }
-
         return input.chars().mapToObj(c -> (char) c).collect(groupingBy(identity(), counting()));
     }
 
     /**
      * Changes passed in string to all lower case and adds underscore between words.
      *
-     * @param input The input string
+     * @param value The input string
      * @return the input string in all lower case with underscores between words
      */
-    public static String underscored(final String input) {
-        if (input == null || input.length() == 0) {
-            return "";
+    public static Optional<String> underscored(final String value) {
+        if (isEmpty(value)) {
+            return Optional.empty();
+        } else {
+            return Optional.of(value).map(t -> t.trim().replaceAll("([a-z\\d])([A-Z]+)", "$1_$2").replaceAll("[-\\s]+", "_").toLowerCase());
         }
-
-        return input.trim().replaceAll("([a-z\\d])([A-Z]+)", "$1_$2").replaceAll("[-\\s]+", "_").toLowerCase();
     }
 
     /**
@@ -1330,18 +1344,6 @@ public class Strman {
                 .collect(toList());
     }
 
-    /**
-     * Split lines to an array
-     *
-     * @param input The input String
-     * @return lines in an array
-     */
-    public static String[] lines(String input) {
-        if (input == null) {
-            return EMPTY_ARRAY;
-        }
-        return input.split("\r\n?|\n");
-    }
 
     /**
      * Converts a underscored or camelized string into an dasherized one.
@@ -1349,7 +1351,7 @@ public class Strman {
      * @param input The input String
      * @return dasherized String.
      */
-    public static String dasherize(String input) {
+    public static Optional<String> dasherize(String input) {
         return toKebabCase(input);
     }
 
@@ -1359,11 +1361,12 @@ public class Strman {
      * @param input The input String
      * @return humanized version of String
      */
-    public static String humanize(final String input) {
-        if (input == null || input.length() == 0) {
-            return "";
+    public static Optional<String> humanize(final String input) {
+        if (isEmpty(input)) {
+            return Optional.empty();
+        } else {
+            return upperFirst(underscored(input).get().replace("_", ""));
         }
-        return upperFirst(underscored(input).replaceAll("_", " "));
     }
 
     /**
@@ -1372,9 +1375,9 @@ public class Strman {
      * @param input Input string
      * @return String with all the case swapped
      */
-    public static String swapCase(String input) {
-        if (input == null || input.length() == 0) {
-            return "";
+    public static Optional<String> swapCase(String input) {
+        if (isEmpty(input)) {
+            return Optional.empty();
         }
         StringBuilder resultBuilder = new StringBuilder();
         for (char ch : input.toCharArray()) {
@@ -1384,7 +1387,7 @@ public class Strman {
                 resultBuilder.append(Character.toUpperCase(ch));
             }
         }
-        return resultBuilder.toString();
+        return Optional.of(resultBuilder.toString());
     }
 
     /**
@@ -1393,7 +1396,7 @@ public class Strman {
      * @param number Input number
      * @return formatted String
      */
-    public static String formatNumber(long number) {
+    public static Optional<String> formatNumber(long number) {
         String stringRepresentation = Long.toString(number);
         StringBuilder sb = new StringBuilder();
         int bound = stringRepresentation.length() - 1;
@@ -1407,22 +1410,22 @@ public class Strman {
             sb.append(c);
             counter++;
         }
-        return sb.reverse().toString();
+        return Optional.of(sb.reverse().toString());
     }
 
-    public static String[] chop(String input, int step) {
-        if (input == null || input.length() == 0) {
-            return EMPTY_ARRAY;
+    public static Optional<String[]> chop(String input, int step) {
+        if (isEmpty(input)) {
+            return Optional.empty();
         }
         if (step == 0) {
-            return new String[]{input};
+            return Optional.of(new String[]{input});
         }
         int strLength = input.length();
         int iterations = strLength % step == 0 ? strLength / step : strLength / step + 1;
-        return IntStream.iterate(0, i -> i + step)
+        return Optional.of(IntStream.iterate(0, i -> i + step)
                 .limit(iterations)
                 .mapToObj(i -> input.substring(i, (i + step) < strLength ? i + step : strLength))
-                .toArray(String[]::new);
+                .toArray(String[]::new));
     }
 
     /**
@@ -1432,23 +1435,14 @@ public class Strman {
      * @param input The input String
      * @return Start Case String
      */
-    public static String startCase(final String input) {
-        validate(input, NULL_STRING_PREDICATE, NULL_VALUE_MSG_SUPPLIER);
+    public static Optional<String> startCase(final String input) {
         // split into a word when we encounter a space, or an underscore, or a dash, or a switch from lower to upper case
-        String[] words = words(input, "\\s|_|-|(?<=[a-z])(?=[A-Z])");
-        return Arrays.stream(words).filter(w -> !isBlank(w))
-                .map(w -> upperFirst(w.toLowerCase())).collect(joining(" "));
+        return split(input, "\\s|_|-|(?<=[a-z])(?=[A-Z])").map(t -> Arrays.stream(t).filter(w -> !isBlank(w))
+                .map(w -> upperFirst(w.toLowerCase()).get()).collect(joining(" ")));
     }
 
-    public static String escapeRegExp(final String input) {
-        validate(input, NULL_STRING_PREDICATE, NULL_VALUE_MSG_SUPPLIER);
-        return input.replaceAll("[\\\\\\^\\$\\*\\+\\-\\?\\.\\|\\(\\)\\{\\}\\[\\]]", "\\\\$0");
-    }
-
-    private static void validate(String value, Predicate<String> predicate, final Supplier<String> supplier) {
-        if (predicate.test(value)) {
-            throw new IllegalArgumentException(supplier.get());
-        }
+    public static Optional<String> escapeRegExp(final String input) {
+        return Optional.ofNullable(input).map(t -> t.replaceAll("[\\\\\\^\\$\\*\\+\\-\\?\\.\\|\\(\\)\\{\\}\\[\\]]", "\\\\$0"));
     }
 
     private static boolean contains(final String value, final String needle, final boolean caseSensitive) {
